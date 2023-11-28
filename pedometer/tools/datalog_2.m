@@ -1,3 +1,9 @@
+%% AUTHORSHIP STATEMENT
+% The University of Melbourne
+% School of Engineering
+% MCEN90032 Sensor Systems
+% Author: Quang Trung Le
+
 clear all
 close all
 clc
@@ -13,7 +19,7 @@ xAcc_linear_text = "X Linear Acceleration";
 yAcc_linear_text = "Y Linear Acceleration";
 zAcc_linear_text = "Z Linear Acceleration";
 
-T = readtable('default(9).csv');
+T = readtable('../data/sample.csv');
 t = T.time';
 len = length(t);
 xAcc = T.xAcc';
@@ -64,6 +70,7 @@ save thrStepCount THR THR_WINDOW THR_INTERVAL THR_INTERVAL_MAX THR_SLOPE_MIN
 %% Plot 
 figure2("Acceleration Magnitude", "Time (s)", "Acceleration (g)");
 plot(t,(mag3));
+plot(t,(mag));
 
 
 %% ========================= FUNCTIONS =========================
