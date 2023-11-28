@@ -8,20 +8,10 @@ clear all
 close all
 clc
 
-
-xAcc_text = "X Acceleration";
-yAcc_text = "Y Acceleration";
-zAcc_text = "Z Acceleration";
-xAcc_calib_text = "X Calib Acceleration";
-yAcc_calib_text = "Y Calib Acceleration";
-zAcc_calib_text = "Z Calib Acceleration";
-xAcc_linear_text = "X Linear Acceleration";
-yAcc_linear_text = "Y Linear Acceleration";
-zAcc_linear_text = "Z Linear Acceleration";
+addpath(genpath('helpers'));
 
 %% Read data
-% T = readtable('../data/sample.csv');
-T = readtable('../data/slow_walk/SW(2).csv');
+T = readtable('../data/sample.csv');
 t = T.time';
 xAcc = T.xAcc';
 yAcc = T.yAcc';
@@ -43,11 +33,11 @@ coeffHP = Ts*2*pi*MIN_FREQUENCY;
 coeffLPg = 0.025; 
 
 %% Step Count
-THR_ACCEL_MAG = 0.1; %coeffLP = 0.63 - LP only
+THR_ACCEL_MAG = 0.15; %coeffLP = 0.63 - LP only
 THR_INTERVAL_MIN = 16.67;
 THR_INTERVAL_MAX = 100; %2s/0.02 = 100
 THR_SLOPE_MIN = -(THR_ACCEL_MAG - 1)/2*0;
-save THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
+save thresholdStepCount THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
 
 %% Algorithm
 accelMag = getAccelMagnitude(xAcc, yAcc, zAcc);
@@ -69,40 +59,6 @@ end
 
 
 %% ========================= FUNCTIONS =========================
-%% Get band pass
-% @return a vector of band pass filtered signal
-function bandPassSignal = getBandPass(signal, lowerFreqFilterCoeff, upperFreqFilterCoeff)
-    len = length(signal);
-
-    lowerFreqLowPassSignal = ones(1,len);
-    lowerFreqHighPassSignal = zeros(1,len);
-    bandPassSignal = zeros(1,len);
-    for i=1:len-1
-        lowerFreqLowPassSignal(i+1) = (1-lowerFreqFilterCoeff)*lowerFreqLowPassSignal(i) + lowerFreqFilterCoeff*signal(i);
-        lowerFreqHighPassSignal(i) = signal(i)-lowerFreqLowPassSignal(i);
-        % Apply low pass filter with upper Freq on a high passed signal 
-        bandPassSignal(i+1) = (1-upperFreqFilterCoeff)*bandPassSignal(i) + upperFreqFilterCoeff*lowerFreqHighPassSignal(i);
-    end
-end
-
-
-%% Figure
-% Plot Figure with given title, x label & y label
-function plotFigure(titleText, xlabelText, ylabelText)
-    figure; hold on; grid on;
-    title(titleText);
-    xlabel(xlabelText);
-    ylabel(ylabelText);
-end
-
-
-%% Get data
-% @return acceleration magnitude
-function accMag = getAccelMagnitude(xAcc, yAcc, zAcc)
-    accMag = sqrt(xAcc.^2 + yAcc.^2 + zAcc.^2);
-end
-
-
 %% Step count Algorithm
 function [stepCount,peakTime,peakMag] = getStepCountAlgo1(accelMag)
     % A peak is detected as:
@@ -112,7 +68,7 @@ function [stepCount,peakTime,peakMag] = getStepCountAlgo1(accelMag)
     % For the 1st peak, the distance between peaks rule is not applied
     % If there is a lone peak, set it as false positive -> remove
 
-    load THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
+    load thresholdStepCount THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
 
     len = length(accelMag);
     stepFoundFlag = false;  % Flag to check if step is detected
@@ -133,7 +89,7 @@ function [stepCount,peakTime,peakMag] = getStepCountAlgo1(accelMag)
 
         % rule (1) & (2)
         if (stepFoundFlag && (accelMag(i) - accelMag(i-1) <= THR_SLOPE_MIN) ...
-                && ((i-1)-lastPeakTime>= THR_INTERVAL_MIN))
+                && ((i-1) - lastPeakTime >= THR_INTERVAL_MIN))
             % Check if this is the 1st step
             if (firstStepFlag == false)
                 firstStepFlag = ((i-1) - lastPeakTime > THR_INTERVAL_MAX);
@@ -162,7 +118,7 @@ function [stepCount,peakTime,peakMag] = getStepCountAlgo2(accelMag)
     % For the 1st peak, the distance between peaks rule is not applied
     % If there is a lone peak, set it as false positive -> remove
 
-    load THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
+    load thresholdStepCount THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
 
     len = length(accelMag);
     stepFoundFlag = false;  % Flag to check if step is detected
@@ -175,7 +131,6 @@ function [stepCount,peakTime,peakMag] = getStepCountAlgo2(accelMag)
     
     lastMaximaTime = 0;         % store timestamp of the last maxima
     maximaFoundFlag = false;    % Flag to check if a maxima found
-    realPeakFoundFlag = true;   % Flag to check if the peak is updated
     
     for i=1:len-1
         % Lone peak detection -> false positive -> remove
@@ -234,4 +189,3 @@ function [stepCount,peakTime,peakMag] = getStepCountAlgo2(accelMag)
     end
     
 end
-    
