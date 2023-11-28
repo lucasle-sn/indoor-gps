@@ -19,26 +19,21 @@ xAcc_linear_text = "X Linear Acceleration";
 yAcc_linear_text = "Y Linear Acceleration";
 zAcc_linear_text = "Z Linear Acceleration";
 
-
 %% Read data
 % T = readtable('../data/sample.csv');
 T = readtable('../data/slow_walk/SW(2).csv');
 t = T.time';
-len = length(t);
 xAcc = T.xAcc';
 yAcc = T.yAcc';
 zAcc = T.zAcc';
 
-
 %% Init data
-% Chosen sampling time and frequency 
+% Chosen sampling time 
 Ts = 0.02;
-Fs = 1/Ts;
 
 % Step frequency at normal movement is 0.5-3Hz (0.33s-2s per step)
 MAX_FREQUENCY = 3;
 MIN_FREQUENCY = 0.5;
-
 
 coeffLP = Ts*2*pi*MAX_FREQUENCY;
 coeffHP = Ts*2*pi*MIN_FREQUENCY;
@@ -47,41 +42,29 @@ coeffHP = Ts*2*pi*MIN_FREQUENCY;
 % This is used to filter out gravity element (g) from acceleration 
 coeffLPg = 0.025; 
 
-
-%% Algorithm
-accelMag = getAccelMagnitude(xAcc, yAcc, zAcc);
-bandPassAccelMag = getBandPass(accelMag, coeffLPg, coeffLP);
-
-
 %% Step Count
 THR_ACCEL_MAG = 0.1; %coeffLP = 0.63 - LP only
 THR_INTERVAL_MIN = 16.67;
 THR_INTERVAL_MAX = 100; %2s/0.02 = 100
 THR_SLOPE_MIN = -(THR_ACCEL_MAG - 1)/2*0;
-save thrStepCount THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
+save THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
 
+%% Algorithm
+accelMag = getAccelMagnitude(xAcc, yAcc, zAcc);
+bandPassAccelMag = getBandPass(accelMag, coeffLPg, coeffLP);
 
-%% Method 1
-% [stepCount,peakTime,peakMag] = getStepCountAlgo1(bandPassAccelMag);
-% plotFigure("Acceleration Magnitude", "Time (s)", "Acceleration (g)");
-% plot(t,bandPassAccelMag,'Linewidth',1);
-% plot(t,THR_ACCEL_MAG*ones(1,len),'--m','Linewidth',1);
-
-%% Method 2
-[stepCount,peakTime,peakMag] = getStepCountAlgo2(bandPassAccelMag);
+% [stepCount,peakTime,peakMag] = getStepCountAlgo1(bandPassAccelMag); % Method 1
+[stepCount,peakTime,peakMag] = getStepCountAlgo2(bandPassAccelMag); % Method 2
 plotFigure("Acceleration Magnitude", "Time (s)", "Acceleration (g)");
 plot(t,bandPassAccelMag,'Linewidth',1);
-plot(t,THR_ACCEL_MAG*ones(1,len),'--m','Linewidth',1);
+plot(t,THR_ACCEL_MAG*ones(1,length(t)),'--m','Linewidth',1);
 
-% Show peaks
-count = 0;
-for i = 1:len
-    if peakMag(i) > 0
-        count = count+1;
+% Plot peaks
+for i = 1:length(t)
+    if (peakMag(i) > 0)
         plot(t(i),peakMag(i), 'og', 'MarkerSize',10, 'Linewidth',1.5);
     end
 end
-
 
 
 
@@ -127,34 +110,36 @@ function [stepCount,peakTime,peakMag] = getStepCountAlgo1(accelMag)
     %  (2) distance between peaks = [THR_INTERVAL_MIN ; THR_INTERVAL_MAX]
     %  (3) magnitude of the peak is > threshold
     % For the 1st peak, the distance between peaks rule is not applied
+    % If there is a lone peak, set it as false positive -> remove
 
-    load thrStepCount THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
+    load THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
 
     len = length(accelMag);
-    stepFoundFlag = false; % Flag to check if step is detected
-    firstStepFlag = false; % Flag to check if this is the 1st step
-    stepCount = 0; % Number of step counter
+    stepFoundFlag = false;  % Flag to check if step is detected
+    firstStepFlag = false;  % Flag to check if this is the 1st step
+    stepCount = 0;          % Number of step counter
     
-    peakTime = [];      % store timestamp of accel magnitude peak
+    peakTime = [];          % store timestamp of accel magnitude peak
     peakMag = zeros(1,len); % store peak accel magnitude
-    lastPeakTime = 0;   % store timestamp of last peak
+    lastPeakTime = 0;       % store timestamp of last peak
 
     for i=1:len-1
-        % New walk -> reset 1st step check flag
+        % Lone peak detection -> false positive -> remove
         if (firstStepFlag && (i - lastPeakTime > THR_INTERVAL_MAX))
             stepCount = stepCount-1;
             peakMag(lastPeakTime) = 0;
             firstStepFlag = false;
         end
 
-        if (stepFoundFlag && (accelMag(i) - accelMag(i-1) <= THR_SLOPE_MIN) && ((i-1)-lastPeakTime>= THR_INTERVAL_MIN))
+        % rule (1) & (2)
+        if (stepFoundFlag && (accelMag(i) - accelMag(i-1) <= THR_SLOPE_MIN) ...
+                && ((i-1)-lastPeakTime>= THR_INTERVAL_MIN))
             % Check if this is the 1st step
             if (firstStepFlag == false)
                 firstStepFlag = ((i-1) - lastPeakTime > THR_INTERVAL_MAX);
             else
                 firstStepFlag = false;
             end
-            
             
             lastPeakTime = i-1;
             stepCount = stepCount+1;
@@ -166,6 +151,7 @@ function [stepCount,peakTime,peakMag] = getStepCountAlgo1(accelMag)
     end
 end
 
+
 %% Step Count Algorithm updated
 function [stepCount,peakTime,peakMag] = getStepCountAlgo2(accelMag)
     % A peak is detected as:
@@ -174,80 +160,69 @@ function [stepCount,peakTime,peakMag] = getStepCountAlgo2(accelMag)
     %  (3) magnitude of the peak is > threshold
     %  (4) peak is updated within THR_INTERVAL_MIN
     % For the 1st peak, the distance between peaks rule is not applied
+    % If there is a lone peak, set it as false positive -> remove
 
-    load thrStepCount THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
+    load THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
 
     len = length(accelMag);
-    stepFoundFlag = false; % Flag to check if step is detected
-    firstStepFlag = false; % Flag to check if this is the 1st step
-    stepCount = 0; % Number of step counter
+    stepFoundFlag = false;  % Flag to check if step is detected
+    firstStepFlag = false;  % Flag to check if this is the 1st step
+    stepCount = 0;          % Number of step counter
     
-    peakTime = [];      % store timestamp of accel magnitude peak
+    peakTime = [];          % store timestamp of accel magnitude peak
     peakMag = zeros(1,len); % store peak accel magnitude
-    lastPeakTime = 0;   % store timestamp of last peak
+    lastPeakTime = 0;       % store timestamp of last peak
     
-    lastMaximaTime = 0; % store timestamp of the last maxima
-    maximaFoundFlag = false; % Flag to check if a maxima found
-    realPeakFoundFlag = true; % Flag to check if the peak is updated
+    lastMaximaTime = 0;         % store timestamp of the last maxima
+    maximaFoundFlag = false;    % Flag to check if a maxima found
+    realPeakFoundFlag = true;   % Flag to check if the peak is updated
     
     for i=1:len-1
-        % New walk -> reset 1st step check flag
+        % Lone peak detection -> false positive -> remove
         if (firstStepFlag && (i - lastPeakTime > THR_INTERVAL_MAX))
-            stepCount = stepCount-1;
+            stepCount = stepCount - 1;
             peakMag(lastPeakTime) = 0;
             firstStepFlag = false;
         end
         
-        if (accelMag(i) >= THR_ACCEL_MAG)
-            stepFoundFlag = true; % rule (3)
-        else
-            stepFoundFlag = false;
-            if (realPeakFoundFlag == false)
+        % According to rule (4), real peak is set if either:
+        % (1) No other peak within time interval (as dealt later on)
+        % (2) The accel magnitude drops < threshold after a maxima found 
+        if (~stepFoundFlag)
+            if (maximaFoundFlag)
                 firstStepFlag = (lastMaximaTime - lastPeakTime > THR_INTERVAL_MAX);
-                updatePeak();   
-                realPeakFoundFlag = true;
+                updatePeak();
+                maximaFoundFlag = false;
             end
-            maximaFoundFlag = false;
-%             realPeakFoundFlag = true;
         end
-        
+
         % rule (1) and rule (2)
         if (stepFoundFlag && (accelMag(i) - accelMag(i-1) <= THR_SLOPE_MIN) ... 
                 && ((i-1) - lastPeakTime >= THR_INTERVAL_MIN))
             newMaximaTime = i-1;
-            realPeakFoundFlag = false;
             
+            % If there was no maxima, set the new maxima as the candidate.
+            % If found a 2nd maxima within Interval, compare new maxima vs the last maxima & update
+            % If reaching to end of Interval, update the peak (force). 
             if (maximaFoundFlag == false)
                 lastMaximaTime = newMaximaTime;
                 maximaFoundFlag = true;
             else
                 % rule (4)
-                if ((newMaximaTime - lastMaximaTime < THR_INTERVAL_MIN) ...
-                        && (accelMag(lastMaximaTime) < accelMag(newMaximaTime)))
-                    lastMaximaTime = newMaximaTime;
+                if (newMaximaTime - lastMaximaTime < THR_INTERVAL_MIN)
+                    if (accelMag(newMaximaTime) > accelMag(lastMaximaTime))
+                        lastMaximaTime = newMaximaTime;
+                    end
                 else
                     firstStepFlag = (lastMaximaTime - lastPeakTime > THR_INTERVAL_MAX);
                     updatePeak();
-                    realPeakFoundFlag = true;
-                    lastMaximaTime = newMaximaTime;
+                    maximaFoundFlag = false;
                 end
             end
-            
-%             if (newMaximaTime-lastPeakTime>= THR_INTERVAL_MIN)
-%                 if (newMaximaTime - lastPeakTime > THR_INTERVAL_MAX)
-%                     firstStepFlag = true;
-%                 else
-%                     firstStepFlag = false;
-%                 end
-%             
-%                 lastPeakTime = newMaximaTime;
-%                 peakTime = [peakTime lastPeakTime];
-%                 peakMag(lastPeakTime) = mag(lastPeakTime);
-%                 stepCount = stepCount+1;
-%             end
         end
+
+        stepFoundFlag = accelMag(i) >= THR_ACCEL_MAG; % rule (3)
     end
-    
     
     function updatePeak()
         % Set maxima as peak
@@ -260,4 +235,3 @@ function [stepCount,peakTime,peakMag] = getStepCountAlgo2(accelMag)
     
 end
     
-
