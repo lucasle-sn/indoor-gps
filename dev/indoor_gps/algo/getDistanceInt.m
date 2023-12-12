@@ -1,5 +1,14 @@
 %% Get travel distence based on integral
-function [dist,y] = getDistanceInt(accelMag, peakMag, Ts)
+
+% A simple algoorithm to estimate travel distance base on integral
+% technique
+
+% @param accelMag Acceleration magnitude [N*1]
+% @param peakAccelMag Peak acceleration magnitude detected [M*1]
+% @param sampling_time Sampling time
+% @return distance Estimated traveled distance over time [N*1]
+% @return total_distance Estimated travelled distance [1*1]
+function [distance, total_distance] = getDistanceInt(accelMag, peakAccelMag, sampling_time)
     len = length(accelMag);
 
     ACCEL_GRAVITY = 9.81; % Gravity acceleration
@@ -9,7 +18,7 @@ function [dist,y] = getDistanceInt(accelMag, peakMag, Ts)
     lastPeak = 0;
     N=100;
     for i=1:len
-        if (peakMag(i) ~= 0)
+        if (peakAccelMag(i) ~= 0)
             step(i) = 1;
             lastPeak = i;
             if (i>=N)
@@ -33,12 +42,12 @@ function [dist,y] = getDistanceInt(accelMag, peakMag, Ts)
     x = zeros(1,len);
     for i=1:len-2
         if (step(i) == 1)
-            x(i+2) = 2*x(i+1) - x(i) + Ts^2*(accelMag(i));
+            x(i+2) = 2*x(i+1) - x(i) + sampling_time^2*(accelMag(i));
         else
             x(i+2) = x(i+1);
         end
     end
-    dist = x(len);
-    y = x;
+    distance = x(len);
+    total_distance = x;
 
 end

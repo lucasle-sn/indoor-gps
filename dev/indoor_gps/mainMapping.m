@@ -2,18 +2,21 @@
 % The University of Melbourne
 % School of Engineering
 % MCEN90032 Sensor Systems
-% Author: Quang Trung Le (987445)
+% Author: Quang Trung Le
 
 
 clear
 close all
 clc
 
-addpath(genpath('SubFunctions'));
+addpath(genpath('../data'));
+
+addpath(genpath('algo'));
+addpath(genpath('internal'));
 
 %% Read data
-filename = 'exp.csv';
-T = readtable(filename);
+datafile = '../data/imu/sample.csv';
+T = readtable(datafile);
 t = T.time;
 len = length(t);
 
@@ -101,8 +104,4 @@ plot(mapX, mapY, '--b', 'Linewidth',2);
 set(gca,'color',[0.92;0.92;0.92]);
 set(gcf,'color','w');
 legend('Realative Heading Offset', 'Absolute Heading', 'Fusion Heading');
-
-
-
-
 
