@@ -9,11 +9,12 @@ close all
 clc
 
 addpath(genpath('../../data'));
-
-addpath(genpath("helpers"));
+addpath(genpath('../../libplot'));
+addpath(genpath('../internal'));
 
 %% Read data
-T = readtable('../../data/sample.csv');
+datafile = '../../data/sample.csv';
+T = readtable(datafile);
 t = T.time';
 len = length(t);
 xAcc = T.xAcc';

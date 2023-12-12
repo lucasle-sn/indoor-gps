@@ -8,18 +8,19 @@ clear all
 close all
 clc
 
-addpath(genpath('../../libplot'));
-addpath(genpath('../../data'));
+addpath(genpath('../libplot'));
+addpath(genpath('../data'));
 
-addpath(genpath('helpers'));
-addpath(genpath('../src'));
+addpath(genpath('algo'));
+addpath(genpath('internal'));
 
 %% Read data
-T = readtable('../../data/sample.csv');
+datafile = '../data/sample.csv';
+T = readtable(datafile);
 t = T.time';
-xAcc = T.xAcc';
-yAcc = T.yAcc';
-zAcc = T.zAcc';
+xAccelRaw = T.xAcc';
+yAccelRaw = T.yAcc';
+zAccelRaw = T.zAcc';
 
 %% Init data
 % Chosen sampling time 
@@ -44,8 +45,8 @@ THR_SLOPE_MIN = -(THR_ACCEL_MAG - 1)/2*0;
 save thresholdStepCount THR_ACCEL_MAG THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
 
 %% Algorithm
-accelMag = getAccelMagnitude(xAcc, yAcc, zAcc);
-bandPassAccelMag = getBandPass(accelMag, coeffLPg, coeffLP);
+accelMagRaw = getAccelMagnitude(xAccelRaw, yAccelRaw, zAccelRaw);
+bandPassAccelMag = getBandPass(accelMagRaw, coeffLPg, coeffLP);
 
 % [stepCount,peakTime,peakMag] = getStepCountAlgoDep(bandPassAccelMag); % Deprecate Method
 [stepCount,peakTime,peakMag] = getStepCountAlgo(bandPassAccelMag); % Updated Method

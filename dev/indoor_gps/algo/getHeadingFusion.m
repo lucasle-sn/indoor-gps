@@ -1,5 +1,15 @@
-function [theta4All, phi4All, psi4All] = getHeadingFusion(qamAll,FkAll, N)
-    len = length(qamAll(1,:));
+%% Fuse Absolute and Relative heading
+% 
+% Simple algorithm fusing absolute and relative heading using Kalman filter
+%
+% @param qaAbs Quaternion form of Absolute heading [4*N]
+% @param FkRel F_k coefficient in SSM (q_k=F_k*q_(k-1)) [4*4N] 
+% @param delay Number of delayed steps to prevent heading bias 
+% @return thetaFused Estimated fused heading theta angle [1*N]
+% @return phiFused Estimated fused heading phi angle [1*N]
+% @return psiFused Estimated fused heading psi angle [1*N]
+function [thetaFused, phiFused, psiFused] = getHeadingFusion(qaAbs,FkRel,delay)
+    len = length(qaAbs(1,:));
 
     Q = 10^-10*eye(4);
     R = 10^-3*eye(4);  
@@ -11,19 +21,18 @@ function [theta4All, phi4All, psi4All] = getHeadingFusion(qamAll,FkAll, N)
     Ts = 0.02;
 
     PkAll = zeros(4,4);
-%     qkAll = qamAll(:,1);
     qkAll = [];
     C = eye(4);
     
-    for i=1:N-1
-        qk = qamAll(:,N);
+    for i=1:delay-1
+        qk = qaAbs(:,delay);
         qkAll = [qkAll, qk];
         PkAll = [PkAll zeros(4,4)];
     end
     
-    for i = N:len
+    for i = delay:len
         Pk = PkAll(:,(4*i-7):(4*i-4));
-        A = FkAll(:,(4*i-3):(4*i));
+        A = FkRel(:,(4*i-3):(4*i));
         qk = qkAll(:,i-1);
 % 
 %         Sq = [0 -qk(4) qk(3); qk(4) 0 -qk(2); -qk(3) qk(2) 0];
@@ -35,7 +44,7 @@ function [theta4All, phi4All, psi4All] = getHeadingFusion(qamAll,FkAll, N)
 
         Kk = (Pkn*C')/(C*Pkn*C'+R);
 
-        qk = qkn + Kk*(qamAll(:,i) - C*qkn);
+        qk = qkn + Kk*(qaAbs(:,i) - C*qkn);
         Pk = (eye(4)-Kk*C)*Pkn;
 
         qkAll = [qkAll, qk];
@@ -44,15 +53,15 @@ function [theta4All, phi4All, psi4All] = getHeadingFusion(qamAll,FkAll, N)
     
     
     %% Get Angles
-    theta4All = zeros(1,len);
-    phi4All = zeros(1,len);
-    psi4All = zeros(1,len);
+    thetaFused = zeros(1,len);
+    phiFused = zeros(1,len);
+    psiFused = zeros(1,len);
 
     for i = 1:len
         [theta, phi, psi] = getQuaternionAngle(qkAll(:,i));
 
-        theta4All(i) = theta;
-        phi4All(i) = phi;
-        psi4All(i) = psi;
+        thetaFused(i) = theta;
+        phiFused(i) = phi;
+        psiFused(i) = psi;
     end
 end

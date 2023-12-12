@@ -11,11 +11,12 @@ clc
 
 addpath(genpath('../data'));
 
-addpath(genpath('helpers'));
+addpath(genpath('algo'));
+addpath(genpath('internal'));
 
 %% Read data
-filename = '../data/imu/sample.csv';
-T = readtable(filename);
+datafile = '../data/imu/sample.csv';
+T = readtable(datafile);
 t = T.time;
 len = length(t);
 
@@ -103,8 +104,4 @@ plot(mapX, mapY, '--b', 'Linewidth',2);
 set(gca,'color',[0.92;0.92;0.92]);
 set(gcf,'color','w');
 legend('Realative Heading Offset', 'Absolute Heading', 'Fusion Heading');
-
-
-
-
 

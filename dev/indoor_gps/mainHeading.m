@@ -13,28 +13,29 @@ clc
 addpath(genpath('../libmath'));
 addpath(genpath('../data'));
 
-addpath(genpath('helpers'));
+addpath(genpath('algo'));
+addpath(genpath('internal'));
 
 %% Read data
-filename = '../data/imu/test.csv';
-T = readtable(filename);
+datafile = '../data/imu/test.csv';
+T = readtable(datafile);
 t = T.time;
 len = length(t);
 
-xMag = T.xMag;
-yMag = T.yMag;
-zMag = T.zMag;
-xAcc = T.xAcc;
-yAcc = T.yAcc;
-zAcc = T.zAcc;
-xGyr = T.xGyr;
-yGyr = T.yGyr;
-zGyr = T.zGyr;
+xMagRaw = T.xMag;
+yMagRaw = T.yMag;
+zMagRaw = T.zMag;
+xAccelRaw = T.xAcc;
+yAccelRaw = T.yAcc;
+zAccelRaw = T.zAcc;
+xGyroRaw = T.xGyr;
+yGyroRaw = T.yGyr;
+zGyroRaw = T.zGyr;
 
-mag = [xMag,yMag,zMag];
+magRaw = [xMagRaw,yMagRaw,zMagRaw];
 
 %% Mag
-[xMagCalib, yMagCalib, zMagCalib] = getMagCalib(mag);
+[xMagCalib, yMagCalib, zMagCalib] = getMagCalib(magRaw);
 
 
 %% Acc
@@ -42,40 +43,40 @@ Ts = 0.02;
 GRAVITY_FREQUENCY = 0.5; % 1Hz
 COEFF_GRAVITY_LP = Ts*2*3.14*GRAVITY_FREQUENCY;
 
-[xgAcc,ygAcc,zgAcc] = getAccGravity(xAcc, yAcc, zAcc, COEFF_GRAVITY_LP);
+[xgAccel,ygAccel,zgAccel] = getGravityAccel(xAccelRaw, yAccelRaw, zAccelRaw, COEFF_GRAVITY_LP);
 
 
 %% Gyr
 LP_FREQUENCY = 0.5; % 1Hz
-COEFF_GYR_LP = Ts*2*3.14*LP_FREQUENCY;
+COEFF_GYRO_LP = Ts*2*3.14*LP_FREQUENCY;
 
-[xGyrCalib, yGyrCalib, zGyrCalib] = getGyrCalib(xGyr, yGyr, zGyr, COEFF_GYR_LP);
+[xGyroCalib, yGyroCalib, zGyroCalib] = getGyroCalib(xGyroRaw, yGyroRaw, zGyroRaw, COEFF_GYRO_LP);
 
 
 %% Merge
 MAG = 60;
-gAcc = [xgAcc, ygAcc, zgAcc]';
+gAccel = [xgAccel, ygAccel, zgAccel]';
 magCalib = [xMagCalib, yMagCalib, zMagCalib]';
 magCalib = magCalib/MAG;
 
 
 %% Absolute Heading M1
-[thetaAllAbs, phiAllAbs, psiAllAbs, qamAll] = getHeadingAbsM1(gAcc, magCalib);
+[thetaAbs, phiAbs, psiAbs, qaAbs] = getHeadingAbs(gAccel, magCalib);
 
 
 %% Relative Heading: Angular Rate
-[thetaAllRel,phiAllRel,psiAllRel, FkAll] = getHeadingRel(xGyrCalib,yGyrCalib,zGyrCalib, Ts);
+[thetaRel, phiRel, psiRel, FkRel] = getHeadingRel(xGyroCalib, yGyroCalib, zGyroCalib, Ts);
 
 
 %% Fusion
-N = 50;
-[thetaAllFus, phiAllFus, psiAllFus] = getHeadingFusion(qamAll,FkAll,N);
+DELAY_STEPS = 50;
+[thetaFused, phiFused, psiFused] = getHeadingFusion(qaAbs, FkRel, DELAY_STEPS);
 
 %% Plot
 figure; grid on; hold on;
-plot(t, psiAllRel + psiAllAbs(N), 'Linewidth',2);
-plot(t, psiAllAbs, 'Linewidth',1);
-plot(t, psiAllFus, '-', 'Linewidth',1);
+plot(t, psiRel + psiAbs(DELAY_STEPS), 'Linewidth',2);
+plot(t, psiAbs, 'Linewidth',1);
+plot(t, psiFused, '-', 'Linewidth',1);
 
 xlabel('Time(s)');
 ylabel('Orientation(deg)');

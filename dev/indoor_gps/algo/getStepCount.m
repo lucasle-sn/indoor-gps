@@ -1,19 +1,21 @@
-%% AUTHORSHIP STATEMENT
-% The University of Melbourne
-% School of Engineering
-% MCEN90032 Sensor Systems
-% Author: Quang Trung Le (987445)
-
-
-%% FUNCTION
-function [stepCount,peakTime,peakMag, distanceM1, distanceM2, distanceAllM1, distanceAllM2] = getStepCount(mag)
+%% Get Travelled distance and step counters
+%
+% @param accelMag Magnitude of Acceleration [1*N]
+% @return stepCount Step counter
+% @return peakTime Predicted step timestamp [1*M]
+% @return peakAccelMag Acceleration magnitude of predicted step [1*M]
+% @return totalDistanceM1 Travelled distance using method 1
+% @return totalDistanceM2 Travelled distance using method 2
+% @return totalDistanceM1 Travelled distance using method 1 over time [1*N]
+% @return totalDistanceM2 Travelled distance using method 2 over time [1*N]
+function [stepCount, peakTime, peakAccelMag, totalDistanceM1, totalDistanceM2, distancesM1, distancesM2] = getStepCount(accelMag)
 
     avgVel = 0;
     HEIGHT = 1.8;
 
     load thrStepCount THR THR_INTERVAL_MIN THR_INTERVAL_MAX THR_SLOPE_MIN
 
-    len = length(mag);
+    len = length(accelMag);
     
     
     stepCheckFlag = false;
@@ -22,7 +24,7 @@ function [stepCount,peakTime,peakMag, distanceM1, distanceM2, distanceAllM1, dis
     
 
     peakTime = [];
-    peakMag = zeros(1,len);
+    peakAccelMag = zeros(1,len);
     lastPeakTime = 0;
     
     
@@ -34,11 +36,11 @@ function [stepCount,peakTime,peakMag, distanceM1, distanceM2, distanceAllM1, dis
     for i=1:len-1
         if (firstStepCheckFlag == true && (i - lastPeakTime > THR_INTERVAL_MAX))
             stepCount = stepCount-1;
-            peakMag(lastPeakTime) = 0;
+            peakAccelMag(lastPeakTime) = 0;
             firstStepCheckFlag = false;
         end
         
-        if (mag(i) >= THR)
+        if (accelMag(i) >= THR)
             stepCheckFlag = true;
         else
             stepCheckFlag = false;
@@ -51,7 +53,7 @@ function [stepCount,peakTime,peakMag, distanceM1, distanceM2, distanceAllM1, dis
         end
         
 
-        if (stepCheckFlag == true && (mag(i)- mag(i-1) <= THR_SLOPE_MIN) && ((i-1)-lastPeakTime>= THR_INTERVAL_MIN))
+        if (stepCheckFlag == true && (accelMag(i)- accelMag(i-1) <= THR_SLOPE_MIN) && ((i-1)-lastPeakTime>= THR_INTERVAL_MIN))
             
                 newMaximaTime = i-1;
                 realPeakUpdated = false;
@@ -61,7 +63,7 @@ function [stepCount,peakTime,peakMag, distanceM1, distanceM2, distanceAllM1, dis
                     maximaCheckFlag = true;
                 else
                     if (newMaximaTime - lastMaximaTime < THR_INTERVAL_MIN)
-                        if (mag(lastMaximaTime) < mag(newMaximaTime))
+                        if (accelMag(lastMaximaTime) < accelMag(newMaximaTime))
                             lastMaximaTime = newMaximaTime;
                         end
                     else
@@ -91,7 +93,7 @@ function [stepCount,peakTime,peakMag, distanceM1, distanceM2, distanceAllM1, dis
         lastPeakTime = lastMaximaTime;
         
         peakTime = [peakTime lastPeakTime];
-        peakMag(lastPeakTime) = mag(lastPeakTime);
+        peakAccelMag(lastPeakTime) = accelMag(lastPeakTime);
         stepCount = stepCount+1;
 
         realPeakUpdated = true;
@@ -107,38 +109,38 @@ function [stepCount,peakTime,peakMag, distanceM1, distanceM2, distanceAllM1, dis
 
 
     count2s = 0;
-    distanceM1 = 0;
-    distanceAllM1 = zeros(1,len);
+    totalDistanceM1 = 0;
+    distancesM1 = zeros(1,len);
     for i=1:len
-        if (peakMag(i)>0)
+        if (peakAccelMag(i)>0)
             count2s = count2s+1;
         end
         
         if (mod(i-1,100) == 0)
             stride2s = getStride2sM1(count2s,HEIGHT);
-            distanceM1 = distanceM1 + stride2s*count2s;
+            totalDistanceM1 = totalDistanceM1 + stride2s*count2s;
             count2s = 0;
         end
         
-        distanceAllM1(i) = distanceM1;
+        distancesM1(i) = totalDistanceM1;
     end
     
     
     count2s = 0;
-    distanceM2 = 0;
-    distanceAllM2 = zeros(1,len);
+    totalDistanceM2 = 0;
+    distancesM2 = zeros(1,len);
     for i=1:len
-        if (peakMag(i)>0)
+        if (peakAccelMag(i)>0)
             count2s = count2s+1;
         end
         
         if (mod(i-1,100) == 0)
             stride2s = getStride2sM2(count2s,HEIGHT);
-            distanceM2 = distanceM2 + stride2s*count2s;
+            totalDistanceM2 = totalDistanceM2 + stride2s*count2s;
             count2s = 0;
         end
         
-        distanceAllM2(i) = distanceM2;
+        distancesM2(i) = totalDistanceM2;
     end
 
     
