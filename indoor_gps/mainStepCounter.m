@@ -2,17 +2,19 @@
 % The University of Melbourne
 % School of Engineering
 % MCEN90032 Sensor Systems
-% Author: Quang Trung Le (987445)
+% Author: Quang Trung Le
 
 
 clear
 close all
 clc
 
+addpath(genpath('../data'));
+
 addpath(genpath('helpers'));
 
 %% Read data
-T = readtable('NW.csv');
+T = readtable('../data/imu/sample_nw.csv');
 t = T.time';
 len = length(t);
 xAcc = T.xAcc';

@@ -8,10 +8,12 @@ clear all
 close all
 clc
 
+addpath(genpath('../../data'));
+
 addpath(genpath("helpers"));
 
 %% Read data
-T = readtable('../data/sample.csv');
+T = readtable('../../data/sample.csv');
 t = T.time';
 len = length(t);
 xAcc = T.xAcc';
