@@ -1,6 +1,6 @@
 # Indoor-gps
 
-## Pedometer (dev/pedometer)
+## Pedometer (pedometer)
 Pedometer is a device which automatically detects human walking steps. It plays an important
 role in monitoring the human’s daily routine and behavior recognition.
 
@@ -19,7 +19,7 @@ the phone is put inside a pant’s pocket and it will track only the walking act
 * `pedometer/tools/mainFFT.m`: Apply Fast Fourier transform to sample data.
 * `pedometer/mainStepCounter.m`: Test step counter algorithm.
 
-## Indoor GPS (dev/indoor_gps)
+## Indoor GPS (indoor_gps)
 Indoor GPS (IPS), which is also known as Pedestrian dead reckoning (PDR), can be described as
 an GPS for the indoor environments. It collects the data from the internal sensors of smartphone to
 estimate the position and orientation of the device.
@@ -31,7 +31,4 @@ Due to the complex behaviours of human (walking, running) and various phone posi
 phone.
 
 ### Algorithm
-Refer to `dev/indoor_gps/README.md`
-
-## Android app (app/)
-Application is built using Unity, reflecting the algorithm for indoor GPS developed in `dev/indoor_gps`. 
+Refer to `indoor_gps/README.md`
