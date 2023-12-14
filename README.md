@@ -32,6 +32,3 @@ phone.
 
 ### Algorithm
 Refer to `dev/indoor_gps/README.md`
-
-## Android app (app/)
-Application is built using Unity, reflecting the algorithm for indoor GPS developed in `dev/indoor_gps`. 
